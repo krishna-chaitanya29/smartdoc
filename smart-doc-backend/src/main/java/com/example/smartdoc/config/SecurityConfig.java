@@ -41,12 +41,8 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // ❌ OLD: configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        
-        // ✅ NEW: Allow your Vercel App (Replace with your actual Vercel URL)
-        // OR use "*" to allow everyone (Easiest for testing)
-        configuration.setAllowedPatterns(List.of("*")); // For Spring Boot 3.x, use setAllowedOriginPatterns("*")
-        configuration.setAllowedOriginPatterns(List.of("*")); // Use this one!
+        // ALLOW EVERYTHING (Fixes the error guaranteed)
+        configuration.setAllowedOriginPatterns(List.of("*")); 
         
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
