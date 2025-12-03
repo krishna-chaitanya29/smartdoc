@@ -37,12 +37,18 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return new BCryptPasswordEncoder(); // Encrypts passwords (e.g., "123456" -> "$2a$10$...")
     }
 
-    // Allow React (Port 5173) to talk to Java
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "DELETE", "OPTIONS"));
+        
+        // ❌ OLD: configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        
+        // ✅ NEW: Allow your Vercel App (Replace with your actual Vercel URL)
+        // OR use "*" to allow everyone (Easiest for testing)
+        configuration.setAllowedPatterns(List.of("*")); // For Spring Boot 3.x, use setAllowedOriginPatterns("*")
+        configuration.setAllowedOriginPatterns(List.of("*")); // Use this one!
+        
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         

@@ -1,10 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-// 1. ADDED 'Eraser' TO IMPORTS
 import { Send, Upload, FileText, User, Loader2, LogOut, Trash2, Eraser } from 'lucide-react';
 
-const API_URL = "http://localhost:8080/api/docs";
+// IMPORT THE CONFIG URL (For Deployment)
+import { API_BASE_URL } from '../config'; 
+
+// Construct the full endpoint
+const API_URL = `${API_BASE_URL}/api/docs`;
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -68,7 +71,7 @@ export default function Dashboard() {
     navigate("/");
   };
 
-  // 2. NEW FUNCTION: CLEAR CHAT HISTORY
+  // 2. CLEAR CHAT HISTORY
   const handleClearChat = async () => {
     if (messages.length <= 1) return; 
     if (!window.confirm("Clear all chat history? This cannot be undone.")) return;
@@ -172,7 +175,7 @@ export default function Dashboard() {
             <span style={{ fontWeight: 600 }}>{userId}</span>
           </div>
 
-          {/* 3. NEW: CLEAR CHAT BUTTON */}
+          {/* CLEAR CHAT BUTTON */}
           <button 
             onClick={handleClearChat} 
             title="Clear Chat History"

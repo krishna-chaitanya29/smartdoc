@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { User, Lock, ArrowRight, UserPlus, LogIn } from 'lucide-react';
+import { API_BASE_URL } from '../config'; // Import it
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true); // true = Login, false = Signup
@@ -10,8 +11,8 @@ export default function AuthPage() {
   const [successMsg, setSuccessMsg] = useState('');
   const navigate = useNavigate();
 
-  const API_URL = "http://localhost:8080/api/auth";
-
+  // const API_URL = "http://localhost:8080/api/auth";
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -20,7 +21,7 @@ export default function AuthPage() {
     const endpoint = isLogin ? '/login' : '/signup';
     
     try {
-      const res = await axios.post(`${API_URL}${endpoint}`, formData);
+      const res = await axios.post(`${API_BASE_URL}/api/auth${endpoint}`, formData);
       
       if (isLogin) {
         // LOGIN SUCCESS: Save session and go to dashboard
