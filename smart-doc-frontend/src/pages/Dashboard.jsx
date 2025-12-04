@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Send, Upload, FileText, User, Loader2, LogOut, Trash2, Eraser } from 'lucide-react';
+import { Send, Upload, FileText, User, Loader2, LogOut, Trash2, Eraser, Menu } from 'lucide-react';
 
 // IMPORT THE CONFIG URL (For Deployment)
 import { API_BASE_URL } from '../config'; 
@@ -12,6 +12,7 @@ const API_URL = `${API_BASE_URL}/api/docs`;
 export default function Dashboard() {
   const navigate = useNavigate();
   const [userId, setUserId] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   
   // File State
   const [file, setFile] = useState(null);
@@ -25,6 +26,7 @@ export default function Dashboard() {
   const [isTyping, setIsTyping] = useState(false);
 
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -39,7 +41,7 @@ export default function Dashboard() {
       
       if (storedDoc) {
         setActiveDocName(storedDoc);
-        setUploadStatus("✅ Ready (Restored)");
+        setUploadStatus("✅ Ready");
       }
     }
   }, [navigate]);
@@ -59,9 +61,10 @@ export default function Dashboard() {
       ])).flat();
       
       if (history.length > 0) setMessages(history);
-      else setMessages([{ role: 'ai', text: 'Hello! Upload a document to start.' }]);
+      else setMessages([{ role: 'ai', text: 'Upload a document to get started. I\'ll help you find answers instantly.' }]);
     } catch (err) {
       console.error(err);
+      setMessages([{ role: 'ai', text: 'Upload a document to get started. I\'ll help you find answers instantly.' }]);
     }
   };
 
@@ -71,14 +74,13 @@ export default function Dashboard() {
     navigate("/");
   };
 
-  // 2. CLEAR CHAT HISTORY
   const handleClearChat = async () => {
-    if (messages.length <= 1) return; 
+    if (messages.length === 0) return; 
     if (!window.confirm("Clear all chat history? This cannot be undone.")) return;
 
     try {
       await axios.delete(`${API_URL}/history?user_id=${userId}`);
-      setMessages([{ role: 'ai', text: 'Chat history cleared. Start fresh!' }]);
+      setMessages([{ role: 'ai', text: 'Chat history cleared. Ready for new questions!' }]);
     } catch (err) {
       alert("Failed to clear history.");
     }
@@ -106,10 +108,12 @@ export default function Dashboard() {
       setActiveDocName(docName);
       localStorage.setItem("active_doc", docName);
       
-      setUploadStatus("✅ Ready!");
-      setMessages(prev => [...prev, { role: 'ai', text: `I've read ${docName}. Ask me anything!` }]);
+      setUploadStatus("✅ Ready");
+      setMessages(prev => [...prev, { role: 'ai', text: `Perfect! I've analyzed "${docName}". What would you like to know?` }]);
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error) {
-      setUploadStatus("❌ Failed");
+      setUploadStatus("❌ Upload failed");
     } finally {
       setIsUploading(false);
     }
@@ -120,17 +124,17 @@ export default function Dashboard() {
         alert("No document to delete.");
         return;
     }
-    if(!window.confirm(`Delete memory for "${activeDocName}"?`)) return;
+    if(!window.confirm(`Delete "${activeDocName}"?`)) return;
 
     try {
         await axios.delete(`${API_URL}/delete?filename=${activeDocName}&user_id=${userId}`);
         
-        alert("Document memory wiped.");
-        setMessages([{ role: 'ai', text: 'Memory cleared.' }]);
+        setMessages([{ role: 'ai', text: 'Document cleared. Upload a new one to continue.' }]);
         setFile(null);
         setActiveDocName("");
         localStorage.removeItem("active_doc");
         setUploadStatus("");
+        if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
         alert("Failed to delete.");
     }
@@ -138,7 +142,7 @@ export default function Dashboard() {
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || !activeDocName) return;
 
     const userMessage = input;
     setInput("");
@@ -154,7 +158,7 @@ export default function Dashboard() {
       
       setMessages(prev => [...prev, { role: 'ai', text: res.data.answer }]);
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'ai', text: "Error connecting to server." }]);
+      setMessages(prev => [...prev, { role: 'ai', text: "Sorry, I couldn't get an answer. Please try again." }]);
     } finally {
       setIsTyping(false);
     }
@@ -162,89 +166,189 @@ export default function Dashboard() {
 
   // --- RENDER ---
   return (
-    <div className="container">
-      <header className="header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <FileText color="#2563eb" />
-          <h2>SmartDoc AI</h2>
+    <div className="dashboard-container">
+      {/* Sidebar */}
+      <div className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+        <div className="sidebar-header">
+          <div className="sidebar-logo">
+            <FileText size={20} color="#3b82f6" />
+            <span>SmartDoc</span>
+          </div>
+          <div className="sidebar-actions">
+            <button onClick={handleClearChat} title="Clear Chat History">
+              <Eraser size={16} />
+            </button>
+            <button onClick={handleLogout} title="Logout">
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b' }}>
-            <User size={18} />
-            <span style={{ fontWeight: 600 }}>{userId}</span>
+
+        <div className="sidebar-content">
+          {/* Document Status */}
+          <div className="doc-status">
+            <h4>📄 Active Document</h4>
+            {activeDocName ? (
+              <>
+                <div className="doc-title">{activeDocName}</div>
+                <span className="status-badge">✓ Ready</span>
+              </>
+            ) : (
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>No document loaded</div>
+            )}
           </div>
 
-          {/* CLEAR CHAT BUTTON */}
-          <button 
-            onClick={handleClearChat} 
-            title="Clear Chat History"
-            style={{ 
-              background: '#f1f5f9', 
-              color: '#64748b', 
-              padding: '8px', 
-              borderRadius: '50%', 
-              border: '1px solid #e2e8f0', 
-              cursor: 'pointer', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center' 
-            }}
-          >
-            <Eraser size={18} />
-          </button>
-
-          <button onClick={handleLogout} style={{ background: '#ef4444', padding: '8px 16px', fontSize: '0.9rem', display:'flex', gap:'5px', alignItems:'center' }}>
-            <LogOut size={16} /> Logout
-          </button>
-        </div>
-      </header>
-
-      <div className="main-grid">
-        <aside className="sidebar">
-          <h3>Documents</h3>
-          <div className="upload-box">
-            <input type="file" id="file-upload" hidden onChange={handleFileChange} accept=".pdf"/>
-            <label htmlFor="file-upload" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-              <Upload size={32} color="#94a3b8" />
-              <span style={{ fontSize: '14px', color: '#64748b', textAlign: 'center' }}>
-                {file ? file.name : (activeDocName || "Select PDF")}
-              </span>
-            </label>
+          {/* Upload Section */}
+          <div className="upload-section" onClick={() => fileInputRef.current?.click()}>
+            <input 
+              ref={fileInputRef}
+              type="file" 
+              onChange={handleFileChange}
+              accept=".pdf,.txt,.doc,.docx"
+            />
+            <Upload size={28} color="var(--accent)" style={{ margin: '0 auto', marginBottom: '8px' }} />
+            <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+              {file ? file.name : "Click to upload document"}
+            </p>
+            <p style={{ fontSize: '0.85rem', margin: 0 }}>PDF, TXT, DOC up to 10MB</p>
           </div>
-          
-          <div style={{display:'flex', gap:'10px'}}>
-             <button onClick={handleUpload} disabled={!file || isUploading} style={{ flex: 1 }}>
-                {isUploading ? <Loader2 className="animate-spin" /> : "Upload"}
-             </button>
-             <button onClick={handleDeleteDoc} disabled={!activeDocName} title="Delete Document Memory" style={{ background: '#fee2e2', color:'#ef4444', flex: 0.3, display:'flex', justifyContent:'center' }}>
-                <Trash2 size={20} />
-             </button>
+
+          {/* Upload Buttons */}
+          <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+            <button 
+              onClick={handleUpload} 
+              disabled={!file || isUploading}
+              className="btn-primary"
+              style={{ flex: 1, opacity: !file || isUploading ? 0.5 : 1 }}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Uploading...
+                </>
+              ) : (
+                "Upload"
+              )}
+            </button>
+            <button 
+              onClick={handleDeleteDoc} 
+              disabled={!activeDocName}
+              className="btn-danger"
+              style={{ opacity: !activeDocName ? 0.5 : 1 }}
+              title="Delete Document"
+            >
+              <Trash2 size={16} />
+            </button>
           </div>
-          
+
           {uploadStatus && (
-            <div style={{ fontSize: '13px', textAlign: 'center', marginTop: '10px', color: uploadStatus.includes('Failed') ? 'red' : 'green' }}>
+            <div style={{ 
+              fontSize: '0.85rem', 
+              marginTop: '12px', 
+              padding: '8px',
+              borderRadius: '6px',
+              textAlign: 'center',
+              background: uploadStatus.includes('Failed') ? '#fee2e2' : '#ecfdf5',
+              color: uploadStatus.includes('Failed') ? '#ef4444' : '#10b981'
+            }}>
               {uploadStatus}
             </div>
           )}
-        </aside>
 
-        <main className="chat-area">
-          <div className="messages">
-            {messages.map((msg, idx) => (
-              <div key={idx} className={`message ${msg.role}`}>
-                {msg.text}
-              </div>
-            ))}
-            {isTyping && <div className="message ai">...</div>}
-            <div ref={messagesEndRef} />
+          {/* User Info */}
+          <div style={{ 
+            marginTop: '20px', 
+            padding: '12px',
+            background: 'var(--bg-light)',
+            borderRadius: '8px',
+            fontSize: '0.85rem'
+          }}>
+            <div style={{ color: 'var(--text-secondary)', marginBottom: '4px' }}>Logged in as</div>
+            <div style={{ fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <User size={14} /> {userId}
+            </div>
           </div>
+        </div>
+      </div>
 
-          <form className="input-area" onSubmit={handleSend}>
-            <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask..." disabled={isTyping} />
-            <button type="submit" disabled={isTyping || !input.trim()}><Send size={18} /></button>
+      {/* Main Chat Area */}
+      <div className="main-chat">
+        <div className="chat-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              style={{ background: 'transparent', border: 'none', padding: '8px' }}
+              title="Toggle Sidebar"
+            >
+              <Menu size={20} color="var(--text-primary)" />
+            </button>
+            <h2>SmartDoc AI Assistant</h2>
+          </div>
+        </div>
+
+        {/* Messages Container */}
+        <div className="messages-container">
+          {messages.length === 0 ? (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              height: '100%',
+              color: 'var(--text-secondary)',
+              textAlign: 'center'
+            }}>
+              <div>
+                <FileText size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
+                <p>Upload a document to start chatting</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {messages.map((msg, idx) => (
+                <div key={idx} className={`message ${msg.role}`}>
+                  <div className="message-content">{msg.text}</div>
+                </div>
+              ))}
+              {isTyping && (
+                <div className="message ai">
+                  <div className="typing-indicator">
+                    <div className="typing-dot"></div>
+                    <div className="typing-dot"></div>
+                    <div className="typing-dot"></div>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </>
+          )}
+        </div>
+
+        {/* Chat Input */}
+        <div className="chat-input-section">
+          <form onSubmit={handleSend} className="chat-input-wrapper">
+            <div className="input-container">
+              <textarea 
+                value={input} 
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend(e);
+                  }
+                }}
+                placeholder={activeDocName ? "Ask a question about the document..." : "Upload a document first..."}
+                disabled={isTyping || !activeDocName}
+              />
+            </div>
+            <button 
+              type="submit" 
+              disabled={isTyping || !input.trim() || !activeDocName}
+              className="send-btn"
+              title="Send message"
+            >
+              {isTyping ? <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={20} />}
+            </button>
           </form>
-        </main>
+        </div>
       </div>
     </div>
   )
