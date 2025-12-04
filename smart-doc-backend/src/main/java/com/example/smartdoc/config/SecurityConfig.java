@@ -23,8 +23,7 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         .csrf(csrf -> csrf.disable())
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .authorizeHttpRequests(auth -> auth
-            // UPDATE THIS LINE: Add "/api/docs/**" to the permit list
-            .requestMatchers("/api/auth/**", "/api/docs/**").permitAll() 
+            .requestMatchers("/api/auth/**", "/api/docs/**", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/**").permitAll() 
             .anyRequest().authenticated()
         )
         .httpBasic(basic -> basic.disable())
